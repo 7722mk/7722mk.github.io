@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>商談 不投影アナライザー</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #F5F3EE;
+    --surface: #FFFFFF;
+    --surface2: #EDEAE3;
+    --border: #D8D4CB;
+    --text: #1A1916;
+    --text-muted: #7A7670;
+    --accent: #1A1916;
+    --amber: #C97D2A;
+    --amber-bg: #FDF3E3;
+    --red: #B83232;
+    --red-bg: #FBE9E9;
+    --teal: #1A6B55;
+    --teal-bg: #E3F5EF;
+    --blue: #2457A3;
+    --blue-bg: #E8EEFC;
+    --radius: 10px;
+    --radius-lg: 14px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Noto Sans JP', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    font-size: 15px;
+    line-height: 1.7;
+  }
+  header {
+    background: var(--accent);
+    color: #fff;
+    padding: 18px 32px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  header .logo {
+    font-size: 13px;
+    font-family: 'DM Mono', monospace;
+    letter-spacing: 0.08em;
+    opacity: 0.55;
+  }
+  header h1 {
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+  }
+  .container { max-width: 720px; margin: 0 auto; padding: 36px 20px 80px; }
+
+  /* Input panel */
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 24px;
+    margin-bottom: 20px;
+  }
+  .panel-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  textarea {
+    width: 100%;
+    min-height: 200px;
+    resize: vertical;
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 14px;
+    line-height: 1.75;
+    padding: 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--bg);
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  textarea:focus { border-color: var(--accent); }
+  .input-row {
+    display: flex;
+    gap: 10px;
+    margin-top: 14px;
+    align-items: center;
+  }
+  input[type="text"] {
+    flex: 1;
+    height: 40px;
+    padding: 0 14px;
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--bg);
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  input[type="text"]:focus { border-color: var(--accent); }
+  .btn-analyze {
+    height: 40px;
+    padding: 0 22px;
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: opacity 0.15s, transform 0.1s;
+    letter-spacing: 0.03em;
+  }
+  .btn-analyze:hover:not(:disabled) { opacity: 0.82; }
+  .btn-analyze:active:not(:disabled) { transform: scale(0.97); }
+  .btn-analyze:disabled { opacity: 0.35; cursor: not-allowed; }
+
+  /* Loading */
+  .loading {
+    display: none;
+    align-items: center;
+    gap: 10px;
+    padding: 20px 0;
+    font-size: 14px;
+    color: var(--text-muted);
+  }
+  .loading.show { display: flex; }
+  .spinner {
+    width: 18px; height: 18px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Result sections */
+  #result { display: none; }
+  #result.show { display: block; animation: fadeUp 0.4s ease; }
+  @keyframes fadeUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+
+  .divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 28px 0;
+  }
+  .section-title {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    margin-bottom: 14px;
+  }
+
+  /* Diagnosis card */
+  .diag-card {
+    background: var(--accent);
+    color: #fff;
+    border-radius: var(--radius-lg);
+    padding: 22px 24px;
+    margin-bottom: 14px;
+  }
+  .diag-tags { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+  .diag-tag {
+    font-size: 11px;
+    font-family: 'DM Mono', monospace;
+    padding: 4px 10px;
+    border-radius: 100px;
+    border: 1px solid rgba(255,255,255,0.3);
+    color: rgba(255,255,255,0.8);
+    letter-spacing: 0.04em;
+  }
+  .diag-summary { font-size: 17px; font-weight: 700; line-height: 1.55; margin-bottom: 10px; }
+  .diag-intro { font-size: 13px; color: rgba(255,255,255,0.7); line-height: 1.7; }
+
+  /* Report card */
+  .rcard {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    margin-bottom: 12px;
+  }
+  .rcard-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 11px 18px;
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-muted);
+    letter-spacing: 0.02em;
+  }
+  .rcard-header .ico { font-size: 15px; }
+  .rcard-body { padding: 18px; font-size: 14px; line-height: 1.8; color: var(--text); white-space: pre-wrap; }
+
+  .sub-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    margin-bottom: 6px;
+    margin-top: 16px;
+  }
+  .sub-label:first-child { margin-top: 0; }
+  .sub-body { font-size: 14px; line-height: 1.8; white-space: pre-wrap; }
+  blockquote {
+    border-left: 3px solid var(--border);
+    padding-left: 14px;
+    color: var(--text-muted);
+    font-size: 13px;
+    line-height: 1.7;
+    margin: 4px 0;
+  }
+  .try-speech {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    font-size: 14px;
+    line-height: 1.8;
+    white-space: pre-wrap;
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    color: var(--text);
+  }
+
+  /* Slack box */
+  .slack-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+  }
+  .slack-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 11px 18px;
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+  }
+  .slack-to-row { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-muted); }
+  .slack-to-name { font-weight: 700; color: var(--text); }
+  .slack-body {
+    padding: 18px;
+    font-size: 14px;
+    line-height: 1.85;
+    white-space: pre-wrap;
+    min-height: 80px;
+  }
+  .btn-copy {
+    height: 30px;
+    padding: 0 14px;
+    font-size: 12px;
+    font-family: 'Noto Sans JP', sans-serif;
+    font-weight: 700;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    transition: background 0.12s, color 0.12s;
+    letter-spacing: 0.03em;
+  }
+  .btn-copy:hover { background: var(--surface2); color: var(--text); }
+
+  footer {
+    text-align: center;
+    padding: 32px 16px;
+    font-size: 12px;
+    color: var(--text-muted);
+    font-family: 'DM Mono', monospace;
+    letter-spacing: 0.04em;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <span class="logo">FS ENABLEMENT</span>
+  <h1>商談 不投影アナライザー</h1>
+</header>
+
+<div class="container">
+
+  <div class="panel">
+    <div class="panel-label">商談文字起こし</div>
+    <textarea id="minutes" placeholder="ここに商談の文字起こしを貼り付けてください"></textarea>
+    <div class="input-row">
+      <input type="text" id="tantousha" placeholder="Slack下書き宛先（例：田中さん）" />
+      <button class="btn-analyze" id="analyze-btn" onclick="analyze()">分析する →</button>
+    </div>
+  </div>
+
+  <div class="loading" id="loading">
+    <div class="spinner"></div>
+    <span>商談を分析中...</span>
+  </div>
+
+  <div id="result">
+    <div class="section-title">不投影理由レポート</div>
+
+    <div class="diag-card">
+      <div class="diag-tags">
+        <span class="diag-tag" id="tag-yoin"></span>
+        <span class="diag-tag" id="tag-case"></span>
+      </div>
+      <div class="diag-summary" id="out-summary"></div>
+      <div class="diag-intro" id="out-intro"></div>
+    </div>
+
+    <div class="rcard">
+      <div class="rcard-header"><span class="ico">🌟</span> 素晴らしかった点 (Keep)</div>
+      <div class="rcard-body" id="out-keep"></div>
+    </div>
+
+    <div class="rcard">
+      <div class="rcard-header"><span class="ico">💡</span> インパクト最大化ポイント (Problem)</div>
+      <div class="rcard-body">
+        <div class="sub-label">タイミング</div>
+        <div class="sub-body" id="out-timing"></div>
+        <div class="sub-label">顧客の発話（キー）</div>
+        <blockquote id="out-quote"></blockquote>
+        <div class="sub-label">当時のアクション</div>
+        <div class="sub-body" id="out-action"></div>
+        <div class="sub-label">逸失したインパクト</div>
+        <div class="sub-body" id="out-loss"></div>
+      </div>
+    </div>
+
+    <div class="rcard">
+      <div class="rcard-header"><span class="ico">🚀</span> 次回への推奨アクション (Try)</div>
+      <div class="rcard-body">
+        <div class="sub-label">推奨される切り替え発話例</div>
+        <div class="try-speech" id="out-try-speech"></div>
+        <div style="margin-top:12px; font-size:13px; color:var(--text-muted); line-height:1.75" id="out-try-desc"></div>
+      </div>
+    </div>
+
+    <div class="rcard">
+      <div class="rcard-header"><span class="ico">✍️</span> リフレクション（次回への準備）</div>
+      <div class="rcard-body" id="out-reflection"></div>
+    </div>
+
+    <div class="divider"></div>
+    <div class="section-title">Slack 下書き</div>
+
+    <div class="slack-wrap">
+      <div class="slack-header">
+        <div class="slack-to-row">
+          宛先：<span class="slack-to-name" id="slack-to">-</span>
+        </div>
+        <button class="btn-copy" onclick="copySlack()">📋 コピー</button>
+      </div>
+      <div class="slack-body" id="out-slack"></div>
+    </div>
+  </div>
+
+</div>
+
+<footer>商談 不投影アナライザー — powered by Claude</footer>
+
+<script>
+const SYSTEM_PROMPT = `あなたはFS（フィールドセールス）コンサルタントの商談を分析し、自社ツール（プロ人材検索ツール）の投影率を高めることで『成約インパクトを最大化』させるセールスイネブルメント担当者として振る舞ってください。
+
+目的とゴール:
+* コンサルタントが直感的に内容を理解できるよう、不投影理由を分かりやすく一文で要約する。
+* なぜ投影に至らなかったのかという結論を明確に伝え、次回の商談での投影率を向上させる。
+* 具体的な改善アクション（発話例）を提示し、成約インパクトを最大化させる。
+
+行動指針と分析ステップ:
+1) 商談内容の精査と分析:
+a) 提供された商談文字起こしを読み込み、顧客のニーズ、FSの対応、ツールの提示タイミングを特定する。
+b) 顧客やFSの発言を具体的に引用し、どのタイミングの対話についてのフィードバックかを明確にする。
+
+2) 詳細分析:
+a) 要因判別（6つの大分類）の特定: 『習慣 / スキル / フェーズ適合性 / 検索結果 / 体制 / 環境』から最も当てはまるものを1つ特定する。
+b) 不投影理由（3分類）の特定: 『投影機会の逸失 / 投影機会の未創出 / ツール操作の示唆』から特定する。
+c) 不投影理由の要約: なぜ投影しなかったのか、その本質的な理由を一文で言語化する。
+d) 改善アクションの策定: 決定機の特定と、要因を打破するための具体的な切り替え発話例を策定する。
+
+アウトプット: 以下のJSONのみ返してください。前置き・コードブロック不要。
+
+{
+  "yoin": "（習慣/スキル/フェーズ適合性/検索結果/体制/環境 のいずれか1つ）",
+  "case": "（投影機会の逸失/投影機会の未創出/ツール操作の示唆 のいずれか1つ）",
+  "summary": "（不投影理由を直感的に理解できる一文）",
+  "intro": "（冒頭の称賛と寄り添いの言葉。一文要約の補足。2〜3文）",
+  "keep": "（素晴らしかった点を具体的に。発言引用も可。箇条書き・改行あり）",
+  "timing": "（決定的な瞬間のタイミング：商談のどのあたりか）",
+  "quote": "（顧客の発話キー：文字起こしからの引用）",
+  "action": "（当時のコンサルタントの発話引用と、要因による影響）",
+  "loss": "（投影しなかったことで逃した視覚的納得感や合意形成スピード）",
+  "try_speech": "（次回への推奨される切り替え発話例。具体的なセリフ）",
+  "try_desc": "（このアクションによって口頭の約束がどう確信に変わるかの記述）",
+  "reflection": "Q1. もしあの瞬間で即時投影のアクションを加えていたら、顧客の反応はどう変わっていたと思いますか？\\n\\nQ2. 次回、今回の要因を解消するために、商談前に準備しておきたいことはありますか？",
+  "slack": "（担当者へのSlackメッセージ下書き。フランクに。不投影理由のポイントと次のアクションを含める）"
+}`;
+
+async function analyze() {
+  const minutes = document.getElementById('minutes').value.trim();
+  const tantousha = document.getElementById('tantousha').value.trim() || '担当者';
+  if (!minutes) { alert('文字起こしを入力してください'); return; }
+
+  document.getElementById('loading').classList.add('show');
+  document.getElementById('result').classList.remove('show');
+  document.getElementById('analyze-btn').disabled = true;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        system: SYSTEM_PROMPT,
+        messages: [{ role: 'user', content: `宛先担当者名: ${tantousha}\n\n【商談文字起こし】\n${minutes}` }]
+      })
+    });
+    const data = await res.json();
+    const text = data.content.map(b => b.text || '').join('');
+    const p = JSON.parse(text.replace(/```json|```/g, '').trim());
+
+    document.getElementById('tag-yoin').textContent = '要因：' + (p.yoin || '');
+    document.getElementById('tag-case').textContent = p.case || '';
+    document.getElementById('out-summary').textContent = p.summary || '';
+    document.getElementById('out-intro').textContent = p.intro || '';
+    document.getElementById('out-keep').textContent = p.keep || '';
+    document.getElementById('out-timing').textContent = p.timing || '';
+    document.getElementById('out-quote').textContent = p.quote || '';
+    document.getElementById('out-action').textContent = p.action || '';
+    document.getElementById('out-loss').textContent = p.loss || '';
+    document.getElementById('out-try-speech').textContent = p.try_speech || '';
+    document.getElementById('out-try-desc').textContent = p.try_desc || '';
+    document.getElementById('out-reflection').textContent = p.reflection || '';
+    document.getElementById('out-slack').textContent = p.slack || '';
+    document.getElementById('slack-to').textContent = tantousha;
+
+    document.getElementById('result').classList.add('show');
+    document.getElementById('result').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  } catch(e) {
+    alert('エラーが発生しました: ' + e.message);
+  } finally {
+    document.getElementById('loading').classList.remove('show');
+    document.getElementById('analyze-btn').disabled = false;
+  }
+}
+
+function copySlack() {
+  const text = document.getElementById('out-slack').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.querySelector('.btn-copy');
+    const orig = btn.innerHTML;
+    btn.innerHTML = '✅ コピー完了';
+    setTimeout(() => { btn.innerHTML = orig; }, 2000);
+  });
+}
+</script>
+</body>
+</html>
